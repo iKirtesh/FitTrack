@@ -56,3 +56,15 @@ export function greeting(now: number = Date.now()): string {
   if (h < 17) return 'Good afternoon';
   return 'Good evening';
 }
+
+/** "HH:MM" (24h) -> epoch ms on the given local day, or null if malformed. */
+export function dayTimeToMs(day: string, hhmm: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+  if (!m) return null;
+  const h = Number(m[1]), min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  const d = parseDay(day);
+  d.setHours(h, min, 0, 0);
+  return d.getTime();
+}
+export const nowHHMM = (ts: number = Date.now()) => `${pad(new Date(ts).getHours())}:${pad(new Date(ts).getMinutes())}`;

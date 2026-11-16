@@ -1,6 +1,5 @@
 import { MUSCLE_GROUPS } from '@/constants/exercise';
 import { BUILT_IN_COUNTERS } from '@/constants/counters';
-import { newId } from '@/utils/id';
 import { EXERCISE_SEED } from './seed-exercises';
 import { activityCounters, exercises, muscleGroups } from './schema';
 import type { AppDb } from '@/types/db';
@@ -18,7 +17,8 @@ export function seedReferenceData(db: AppDb, now: number = Date.now()): void {
     for (const e of EXERCISE_SEED) {
       tx.insert(exercises)
         .values({
-          id: newId(),
+          // Deterministic so backups restore cleanly on another install.
+          id: `seed_${e.key}`,
           name: e.name,
           muscleGroupId: e.muscle,
           secondaryMuscles: JSON.stringify(e.secondary ?? []),
@@ -39,7 +39,7 @@ export function seedReferenceData(db: AppDb, now: number = Date.now()): void {
       tx
         .insert(activityCounters)
         .values({
-          id: newId(),
+          id: `builtin_${c.key}`,
           name: c.name,
           unit: c.unit,
           step: c.step,

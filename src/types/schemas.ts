@@ -120,7 +120,7 @@ export const reminderSchema = z.object({
 export type ReminderInput = z.infer<typeof reminderSchema>;
 
 export const goalSchema = z.object({
-  type: z.enum(['weight', 'workouts_per_week', 'weekly_distance', 'custom']),
+  type: z.enum(['weight', 'workouts_per_week', 'weekly_distance']),
   title: z.string().trim().min(1).max(80),
   targetValue: z.number().finite(),
   startValue: z.number().finite().nullable().optional(),

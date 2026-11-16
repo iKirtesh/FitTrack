@@ -126,3 +126,41 @@ export function fastestFullSplit(splits: Split[], splitLengthM = 1000): Split | 
 }
 
 export const FIVE_K_M = 5000;
+
+export interface PauseInterval { from: number; to: number }
+
+/** Milliseconds of pause that happened before time `t`. */
+export function pausedBefore(t: number, pauses: PauseInterval[]): number {
+  let ms = 0;
+  for (const p of pauses) {
+    if (t <= p.from) continue;
+    ms += Math.min(t, p.to) - p.from;
+  }
+  return ms;
+}
+
+export interface TrackSummary {
+  distanceM: number;
+  elevationGainM: number;
+  samples: { distanceM: number; elapsedSec: number }[];
+  accepted: number;
+  rejected: number;
+}
+
+/**
+ * Re-derives distance, elevation and timed samples from stored route points. Deterministic, so a
+ * session interrupted by an app crash can be finished later with exactly the same numbers.
+ * Time spent paused is excluded from elapsed time (and therefore from pace).
+ */
+export function summariseTrack(points: GeoPoint[], startedAt: number, pauses: PauseInterval[] = []): TrackSummary {
+  let st = emptyTrack();
+  const samples: { distanceM: number; elapsedSec: number }[] = [{ distanceM: 0, elapsedSec: 0 }];
+  for (const p of points) {
+    const before = st.accepted;
+    st = addPoint(st, p);
+    if (st.accepted > before && st.distanceM > 0) {
+      samples.push({ distanceM: st.distanceM, elapsedSec: (p.recordedAt - startedAt - pausedBefore(p.recordedAt, pauses)) / 1000 });
+    }
+  }
+  return { distanceM: st.distanceM, elevationGainM: st.elevationGainM, samples, accepted: st.accepted, rejected: st.rejected };
+}

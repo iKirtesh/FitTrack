@@ -27,7 +27,7 @@ export const userProfiles = sqliteTable('user_profiles', {
 
 export const fitnessGoals = sqliteTable('fitness_goals', {
   id: pk(),
-  type: text('type').notNull(), // 'weight' | 'workouts_per_week' | 'weekly_distance' | 'custom'
+  type: text('type').notNull(), // 'weight' (kg) | 'workouts_per_week' (count) | 'weekly_distance' (metres)
   title: text('title').notNull(),
   targetValue: real('target_value').notNull(),
   startValue: real('start_value'),

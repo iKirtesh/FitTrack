@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button, Card, ChipRow, Chip, EmptyState, Field, Pill, Row, Screen, SectionHeader, Text } from '@/components/ui';
 import { PLAN_TEMPLATES } from '@/constants/plans';
@@ -26,9 +26,12 @@ export default function Plans() {
       </Card>
       {data && data.length === 0 ? <EmptyState title="No plans yet" body="Pick a template above or build your own. Set one plan active to see it on your calendar." /> : null}
       {(data ?? []).map((p) => (
-        <Card key={p.id} onPress={() => router.push(`/plans/${p.id}`)}>
-          <Row style={{ justifyContent: 'space-between' }}><Text variant="h2" style={{ flex: 1 }}>{p.name}</Text>{p.isActive ? <Pill tone="success" text="ACTIVE" /> : null}</Row>
-          <Text variant="muted">{p.exerciseCount} exercises{p.description ? ` · ${p.description}` : ''}</Text>
+        <Card key={p.id}>
+          {/* Only the title area is pressable: nested buttons inside a pressable card also trigger the card on web. */}
+          <Pressable accessibilityRole="button" accessibilityLabel={`Open plan ${p.name}`} onPress={() => router.push(`/plans/${p.id}`)} style={{ gap: 4 }}>
+            <Row style={{ justifyContent: 'space-between' }}><Text variant="h2" style={{ flex: 1 }}>{p.name}</Text>{p.isActive ? <Pill tone="success" text="ACTIVE" /> : null}</Row>
+            <Text variant="muted">{p.exerciseCount} exercises{p.description ? ` · ${p.description}` : ''}</Text>
+          </Pressable>
           <Row style={{ flexWrap: 'wrap' }}>
             <Button title={p.isActive ? 'Deactivate' : 'Set active'} variant="secondary" onPress={() => active.mutate({ id: p.id, on: !p.isActive })} />
             <Button title="Duplicate" variant="secondary" onPress={() => dup.mutate(p.id)} />

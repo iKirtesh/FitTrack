@@ -20,7 +20,7 @@ export default function ManualRun() {
   const [h, setH] = useState(''); const [m, setM] = useState(''); const [s, setS] = useState('');
   const [elev, setElev] = useState(''); const [steps, setSteps] = useState(''); const [notes, setNotes] = useState('');
   const [err, setErr] = useState<string | null>(null);
-  const save = useDbMutation((r, v: ManualRunInput) => r.running.createManual(v), { onSuccess: () => router.back() });
+  const save = useDbMutation((r, v: ManualRunInput) => r.running.createManual(v), { onSuccess: ({ session }) => router.replace(`/run/${session.id}`) });
   const num = (x: string) => (x.trim() === '' ? 0 : parseFloat(x.replace(',', '.')));
 
   const submit = () => {

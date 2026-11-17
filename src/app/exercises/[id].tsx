@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LineChart } from '@/components/charts/Charts';
+import { MuscleMap } from '@/components/MuscleMap';
 import { Button, Card, Row, Screen, Segmented, Stat, Text } from '@/components/ui';
 import { EQUIPMENT_LABEL, MUSCLE_GROUPS, TRACKING_LABEL, type Equipment, type TrackingType } from '@/constants/exercise';
 import { RANGES, type RangeKey } from '@/database/repositories/analytics';
@@ -26,11 +27,13 @@ export default function ExerciseDetail() {
     <Screen>
       <Text variant="h1">{ex.name}</Text>
       <Card>
+        <MuscleMap primary={ex.muscleGroupId} secondary={ex.secondaryMuscles} />
+        <Text variant="muted" style={{ textAlign: 'center' }}>Highlighted: primary muscle. Tinted: secondary muscles. A simplified illustration, not an anatomical chart.</Text>
         <Row><Stat label="Muscle" value={muscle(ex.muscleGroupId)} /><Stat label="Equipment" value={EQUIPMENT_LABEL[ex.equipment as Equipment]} /></Row>
         <Row><Stat label="Tracking" value={TRACKING_LABEL[ex.trackingType as TrackingType]} /><Stat label="Difficulty" value={ex.difficulty} /></Row>
         {ex.secondaryMuscles.length ? <Text variant="muted">Also works: {ex.secondaryMuscles.map(muscle).join(', ')}</Text> : null}
       </Card>
-      {ex.instructions ? <Card><Text variant="label">How to</Text><Text>{ex.instructions}</Text><Text variant="muted">Illustrations are not bundled yet; instructions are text only.</Text></Card> : null}
+      {ex.instructions ? <Card><Text variant="label">How to</Text><Text>{ex.instructions}</Text></Card> : null}
       {data.prs.length ? <Card><Text variant="label">Your records</Text>{data.prs.map((p) => <Row key={p.id} style={{ justifyContent: 'space-between' }}><Text>{recordLabel(p.kind, null)}</Text><Text variant="muted">{recordValue(p, u)}{p.kind === 'est_1rm' ? ' (estimated)' : ''}</Text></Row>)}</Card> : null}
       <Card>
         <Text variant="label">Strength progression (top set, {u.wu})</Text>

@@ -15,9 +15,11 @@ function NumInput({ value, onCommit, label, width = 64, decimal }: { value: stri
   const { colors } = useTheme();
   const [text, setText] = useState(value);
   useEffect(() => setText(value), [value]);
+  const commit = () => { const n = parseFloat(text.replace(',', '.')); onCommit(text.trim() === '' || !Number.isFinite(n) || n < 0 ? null : n); };
   return (
     <TextInput accessibilityLabel={label} value={text} onChangeText={setText} keyboardType={decimal ? 'decimal-pad' : 'number-pad'} selectTextOnFocus
-      onEndEditing={() => { const n = parseFloat(text.replace(',', '.')); onCommit(text.trim() === '' || !Number.isFinite(n) || n < 0 ? null : n); }}
+      // onBlur (not onEndEditing): react-native-web never fires onEndEditing, so values would be lost on web.
+      onBlur={commit} onSubmitEditing={commit}
       placeholder="-" placeholderTextColor={colors.textMuted}
       style={{ width, minHeight: MIN_TOUCH, textAlign: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceAlt, color: colors.text, fontSize: 16, fontWeight: '700' }} />
   );

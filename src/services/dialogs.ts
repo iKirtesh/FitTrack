@@ -25,5 +25,10 @@ export const errorMessage = (e: unknown): string => {
   if (e && typeof e === 'object' && 'issues' in e && Array.isArray((e as { issues: { message: string }[] }).issues)) {
     return (e as { issues: { message: string }[] }).issues[0]?.message ?? 'Invalid input';
   }
-  return e instanceof Error ? e.message : 'Something went wrong';
+  if (e instanceof Error) {
+    // Drizzle wraps driver errors; surface the underlying cause so the real problem is visible.
+    const cause = (e as Error & { cause?: unknown }).cause;
+    return cause instanceof Error && cause.message && !e.message.includes(cause.message) ? `${e.message} (${cause.message})` : e.message;
+  }
+  return 'Something went wrong';
 };

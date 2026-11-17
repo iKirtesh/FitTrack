@@ -83,7 +83,8 @@ export function useDbMutation<A, R = void>(run: (r: Repos, arg: A) => R, opts: {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (arg: A) => run(repos, arg),
-    onSuccess: (res) => { void qc.invalidateQueries(); opts.onSuccess?.(res); },
+    // Await the refetch so navigation in onSuccess never sees stale cached data (e.g. "no profile yet").
+    onSuccess: async (res) => { await qc.invalidateQueries(); opts.onSuccess?.(res); },
     onError: (e) => { if (!opts.silent) notify('Could not save', errorMessage(e)); },
   });
 }

@@ -25,6 +25,26 @@ function open() {
 }
 
 /**
+ * Applies pending migrations. On a brand-new web (WASM) database the very first transaction can fail
+ * transiently ("cannot rollback - no transaction is active"). A failed attempt leaves nothing applied
+ * and migrations are idempotent, so a short bounded retry is safe. All attempt errors are kept so a
+ * persistent failure still reports what actually went wrong.
+ */
+async function migrateWithRetry(db: AppDb, attempts = 4): Promise<void> {
+  const errors: string[] = [];
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await migrate(db as never, migrations);
+      return;
+    } catch (e) {
+      errors.push(e instanceof Error ? e.message : String(e));
+      await new Promise((r) => setTimeout(r, 250 * (i + 1)));
+    }
+  }
+  throw new Error(`Migration failed after ${attempts} attempts: ${errors.join(' | ')}`);
+}
+
+/**
  * Opens the database, applies any pending migrations and seeds reference data.
  * Idempotent: concurrent callers share one initialisation. If migration fails the
  * promise rejects and the app shows an error screen rather than running on a
@@ -33,8 +53,13 @@ function open() {
 export function initDatabase(): Promise<AppDb> {
   if (!ready) {
     ready = (async () => {
+      // expo-sqlite on web runs SQLite (WASM) in a worker and its *sync* calls busy-wait on the main
+      // thread, which starves the worker while it is still starting up ("Sync operation timeout").
+      // One async open first lets the worker finish loading; after that sync calls return promptly.
+      // A throwaway in-memory database is used so the real database only ever has one connection.
+      if (Platform.OS === 'web') await (await SQLite.openDatabaseAsync(':memory:')).closeAsync();
       const { db } = open();
-      await migrate(db as never, migrations);
+      await migrateWithRetry(db);
       seedReferenceData(db);
       return db;
     })().catch((e) => {

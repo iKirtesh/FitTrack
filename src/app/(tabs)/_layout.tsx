@@ -20,7 +20,8 @@ export default function TabsLayout() {
   const { width } = useWindowDimensions();
   const wide = width >= 900; // web / tablets get a side rail instead of a bottom bar
   const profile = useProfile();
-  if (profile.isLoading) return null;
+  // A cached "no profile" must not redirect while a refetch is still in flight (e.g. just after onboarding).
+  if (profile.isLoading || (profile.isFetching && !profile.data)) return null;
   if (!profile.data) return <Redirect href="/onboarding" />;
   return (
     <Tabs screenOptions={{

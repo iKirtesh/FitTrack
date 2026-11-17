@@ -130,3 +130,11 @@ export function Pill({ text, tone = 'muted' }: { text: string; tone?: 'muted' | 
   const c = { muted: colors.textMuted, success: colors.success, warning: colors.warning, danger: colors.danger, primary: colors.primary }[tone];
   return <View style={{ borderColor: c, borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 }}><RNText style={{ color: c, fontSize: font.xs, fontWeight: '700' }}>{text}</RNText></View>;
 }
+
+/** Text field that reports its value on blur/submit (not per keystroke). Works on native and web. */
+export function CommitField({ label, initial, onCommit, ...p }: Omit<TextInputProps, 'value' | 'onChangeText' | 'defaultValue'> & { label: string; initial: string; onCommit: (text: string) => void }) {
+  const [text, setText] = React.useState(initial);
+  React.useEffect(() => setText(initial), [initial]);
+  const commit = () => { if (text !== initial) onCommit(text); };
+  return <Field {...p} label={label} value={text} onChangeText={setText} onBlur={commit} onSubmitEditing={commit} />;
+}

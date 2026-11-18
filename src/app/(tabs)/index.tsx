@@ -3,6 +3,7 @@ import { Image, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BarChart, ProgressRing } from '@/components/charts/Charts';
 import { Button, Card, EmptyState, Pill, Row, Screen, SectionHeader, Stat, Text } from '@/components/ui';
+import { MuscleMap, muscleNames } from '@/components/MuscleMap';
 import { DEFAULT_CARDS, type DashboardCardId } from '@/constants/dashboard';
 import { RUN_ACTIVITIES } from '@/constants/activities';
 import { useDbQuery } from '@/hooks/data';
@@ -33,6 +34,7 @@ export default function Home() {
         ...r.running.list({ limit: 5 }).map((x) => ({ id: x.id, kind: 'run' as const, title: RUN_ACTIVITIES.find((a) => a.id === x.activityType)?.label ?? x.activityType, when: x.startedAt, detail: `${u.distance(x.distanceM)} · ${formatDuration(x.durationSec)}` })),
       ].sort((a, b) => b.when - a.when).slice(0, 5),
       records: r.records.recent(3),
+      muscles: r.analytics.muscleLoadForDay(today),
       cards: r.settings.get<DashboardCardId[]>('dashboard.cards', DEFAULT_CARDS),
     };
   });
@@ -64,6 +66,19 @@ export default function Home() {
             <ProgressRing value={profile.dailyWaterTargetMl ? (water?.today ?? 0) / profile.dailyWaterTargetMl : 0} label={`${Math.round(water?.today ?? 0)}`} sub={`of ${profile.dailyWaterTargetMl} ml water`} color="#4C8DFF" />
           </Row>
           <Text variant="muted">{data.daily.stepsSource === 'pedometer' ? 'Steps from your phone sensor.' : 'Steps are entered manually. Update them from the Activity tab.'}</Text>
+        </Card>
+      ) : null}
+
+      {show('workout') ? (
+        <Card>
+          <SectionHeader title="Muscles trained today" />
+          {Object.keys(data.muscles).length ? (
+            <>
+              <MuscleMap heat={data.muscles} height={230} />
+              <Row style={{ flexWrap: 'wrap', gap: 6 }}>{Object.entries(data.muscles).sort((a, b) => b[1] - a[1]).map(([g, n]) => <Pill key={g} text={`${muscleNames([g])[0]} · ${n % 1 ? n.toFixed(1) : n} sets`} tone="primary" />)}</Row>
+              <Text variant="muted">Darker = more completed working sets today. Secondary muscles count half.</Text>
+            </>
+          ) : (<><MuscleMap heat={{}} height={170} /><Text variant="muted">Nothing trained yet today. Finish a set and the muscles you worked light up here.</Text></>)}
         </Card>
       ) : null}
 

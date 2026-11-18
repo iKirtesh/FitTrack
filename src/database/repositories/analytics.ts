@@ -38,6 +38,23 @@ export function analyticsRepo(db: AppDb) {
   };
 
   return {
+    /** Completed working sets per muscle group on one day (secondary muscles count half). Includes a workout still in progress. */
+    muscleLoadForDay(day: string = localDay()): Record<string, number> {
+      const rows = db.select({ group: exercises.muscleGroupId, secondary: exercises.secondaryMuscles }).from(workoutSets)
+        .innerJoin(workoutExercises, eq(workoutSets.workoutExerciseId, workoutExercises.id))
+        .innerJoin(workoutSessions, eq(workoutExercises.sessionId, workoutSessions.id))
+        .innerJoin(exercises, eq(workoutExercises.exerciseId, exercises.id))
+        .where(and(eq(workoutSets.isCompleted, true), sql`${workoutSets.kind} != 'warmup'`, eq(workoutSessions.date, day), sql`${workoutSessions.status} != 'discarded'`)).all();
+      const load: Record<string, number> = {};
+      for (const r of rows) {
+        load[r.group] = (load[r.group] ?? 0) + 1;
+        let sec: string[] = [];
+        try { sec = JSON.parse(r.secondary) as string[]; } catch { /* ignore malformed */ }
+        for (const s of sec) load[s] = (load[s] ?? 0) + 0.5;
+      }
+      return load;
+    },
+
     workoutStats(range: RangeKey, today: string = localDay()) {
       const { from, to } = rangeBounds(range, today);
       const ws = completedWorkouts(from, to);

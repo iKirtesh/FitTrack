@@ -14,7 +14,7 @@ export default function PickExercise() {
   return (
     <Screen>
       <Button title="+ Create custom exercise" variant="secondary" onPress={() => router.push('/exercises/new')} />
-      <ExerciseList onSelect={(e) => {
+      <ExerciseList previewFirst onSelect={(e) => {
         try {
           if (sessionId) repos.workouts.addExercise(sessionId, e.id);
           else if (planId) {

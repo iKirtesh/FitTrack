@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Linking, Platform, Switch, View } from 'react-native';
 import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
 import { checkForUpdate } from '@/services/updates';
 import { useRouter } from 'expo-router';
 import { Button, Card, Chip, ChipRow, Divider, Field, Row, Screen, SectionHeader, Segmented, Text } from '@/components/ui';
@@ -20,6 +21,7 @@ const KINDS = [['workout', 'Workout', 'Time to train'], ['activity', 'Activity',
 const two = (n: number) => String(n).padStart(2, '0');
 
 export default function Settings() {
+  const ota = Updates.useUpdates();
   const router = useRouter();
   const repos = useRepos();
   const { mode, setMode } = useTheme();
@@ -104,7 +106,13 @@ export default function Settings() {
         <Card>
           <SectionHeader title="App updates" />
           <Text variant="muted">Build {Constants.expoConfig?.android?.versionCode ?? 'unknown'}. Checks GitHub for a newer APK. Android still asks you to confirm the install; your data is kept.</Text>
-          <Button title="Check for updates" variant="secondary" onPress={async () => {
+          {Updates.isEnabled ? (
+            ota.isUpdatePending
+              ? <Button title="Update downloaded: restart to apply" onPress={() => void Updates.reloadAsync()} />
+              : <Text variant="muted">{ota.isChecking || ota.isDownloading ? 'Checking for over-the-air updates…' : 'Over-the-air updates are on: app changes download automatically when you open the app and apply on the next restart.'}</Text>
+          ) : <Text variant="muted">Over-the-air updates are not enabled in this build.</Text>}
+          <Button title="Check for updates"
+ variant="secondary" onPress={async () => {
             const r = await checkForUpdate();
             if (r.status === 'error') notify('Update check failed', r.reason);
             else if (r.status === 'current') notify('Up to date', `You have the newest build (${r.current}).`);

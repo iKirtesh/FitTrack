@@ -52,6 +52,35 @@ jobs:
           fs.writeFileSync('app.json',JSON.stringify(c,null,2));
           console.log('versionCode',c.expo.android.versionCode)"
 
+      # Over-the-air updates through EAS Update. Needs the EXPO_TOKEN repository secret; without it the
+      # APK is still built, just with OTA turned off.
+      - name: Configure OTA updates (EAS)
+        id: ota
+        continue-on-error: true
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then echo "EXPO_TOKEN not set, OTA disabled"; exit 1; fi
+          npx --yes eas-cli@latest init --force --non-interactive
+          npx --yes eas-cli@latest update:configure --non-interactive || true
+          node -e "const c=require('./app.json').expo; if(!(c.updates&&c.updates.url)){console.error('no updates.url');process.exit(1)}"
+
+      - name: Turn OTA off if it could not be configured
+        if: steps.ota.outcome != 'success'
+        run: |
+          node -e "
+          const fs=require('fs');const c=JSON.parse(fs.readFileSync('app.json','utf8'));
+          c.expo.updates={enabled:false};delete c.expo.runtimeVersion;
+          fs.writeFileSync('app.json',JSON.stringify(c,null,2));"
+
+      # Published before prebuild so the runtime fingerprint matches the one baked into the APK.
+      - name: Publish OTA update (EAS Update)
+        if: steps.ota.outcome == 'success'
+        continue-on-error: true
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@latest update --channel main --platform android --message "${{ github.sha }}" --non-interactive
+
       - name: Generate the native Android project
         run: npx expo prebuild --platform android --no-install
         env:

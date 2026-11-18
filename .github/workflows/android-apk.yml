@@ -42,6 +42,16 @@ jobs:
           npm run typecheck
           npm test
 
+      # Android only installs an APK over an existing one when the signing key matches and
+      # versionCode is higher, so every build gets a larger number than the last.
+      - name: Bump Android versionCode
+        run: |
+          node -e "
+          const fs=require('fs');const c=JSON.parse(fs.readFileSync('app.json','utf8'));
+          c.expo.android.versionCode=1000+Number(process.env.GITHUB_RUN_NUMBER);
+          fs.writeFileSync('app.json',JSON.stringify(c,null,2));
+          console.log('versionCode',c.expo.android.versionCode)"
+
       - name: Generate the native Android project
         run: npx expo prebuild --platform android --no-install
         env:

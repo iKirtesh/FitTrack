@@ -30,3 +30,16 @@ export async function verifyPin(pin: string): Promise<boolean> {
 }
 export async function disableLock(): Promise<void> { await erase(); }
 export const lockIsSecureStorage = Platform.OS !== 'web';
+
+/** Optional label shown on the lock screen. Stored only on this device and never verified or sent anywhere. */
+const EMAIL_KEY = 'fittrack.lock.email';
+export const isGmail = (s: string) => /^[a-z0-9._%+-]+@(gmail|googlemail)\.com$/i.test(s.trim());
+export async function getLockEmail(): Promise<string | null> {
+  try { return Platform.OS === 'web' ? (typeof localStorage !== 'undefined' ? localStorage.getItem(EMAIL_KEY) : null) : await SecureStore.getItemAsync(EMAIL_KEY); } catch { return null; }
+}
+export async function setLockEmail(email: string | null): Promise<void> {
+  if (email && !isGmail(email)) throw new Error('Enter a valid Gmail address');
+  const v = email?.trim().toLowerCase() ?? null;
+  if (Platform.OS === 'web') { if (v) localStorage.setItem(EMAIL_KEY, v); else localStorage.removeItem(EMAIL_KEY); return; }
+  if (v) await SecureStore.setItemAsync(EMAIL_KEY, v); else await SecureStore.deleteItemAsync(EMAIL_KEY);
+}

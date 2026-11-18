@@ -6,7 +6,7 @@ import { DASHBOARD_CARDS, DEFAULT_CARDS, type DashboardCardId } from '@/constant
 import { WEEKDAYS } from '@/constants/profile';
 import { useDbMutation, useDbQuery, useRepos } from '@/hooks/data';
 import { useTheme, type ThemeMode } from '@/theme/ThemeProvider';
-import { disableLock, isLockEnabled, lockIsSecureStorage, setPin } from '@/features/settings/lock';
+import { disableLock, getLockEmail, isGmail, isLockEnabled, lockIsSecureStorage, setLockEmail, setPin } from '@/features/settings/lock';
 import { cancelIds, ensurePermission, notificationsSupported, scheduleReminder } from '@/services/notifications';
 import { errorMessage, notify } from '@/services/dialogs';
 import { reminderSchema } from '@/types/schemas';
@@ -22,6 +22,9 @@ export default function Settings() {
   const { data } = useDbQuery(['settings'], (r) => ({ cards: r.settings.get<DashboardCardId[]>('dashboard.cards', DEFAULT_CARDS), reminders: r.reminders.list() }));
   const [lock, setLock] = useState(false);
   const [pin, setPinText] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailSaved, setEmailSaved] = useState<string | null>(null);
+  useEffect(() => { void getLockEmail().then((e) => { setEmailSaved(e); setEmail(e ?? ''); }); }, []);
   const [kind, setKind] = useState<(typeof KINDS)[number][0]>('workout');
   const [time, setTime] = useState('18:00');
   const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5]);
@@ -88,6 +91,9 @@ export default function Settings() {
       <Card>
         <SectionHeader title="App lock" />
         <Text variant="muted">{lockIsSecureStorage ? 'A PIN stored in your device keystore. It keeps casual snoopers out; it does not encrypt your data.' : 'On web the PIN is kept in browser storage, which is weak protection. Treat it as a convenience only.'}</Text>
+        <Field label="Gmail address (optional, shown on the lock screen)" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" error={email && !isGmail(email) ? 'Enter a valid Gmail address' : null} />
+        <Text variant="muted">Saved only on this device. It is a label, not a Google sign-in: it is not verified and never leaves your phone.</Text>
+        <Button title={emailSaved && !email ? 'Remove email' : 'Save email'} variant="secondary" disabled={(!!email && !isGmail(email)) || (email.trim().toLowerCase() === (emailSaved ?? ''))} onPress={async () => { try { await setLockEmail(email.trim() || null); setEmailSaved(email.trim().toLowerCase() || null); notify('Saved', email.trim() ? 'Email saved on this device.' : 'Email removed.'); } catch (e) { notify('Could not save email', errorMessage(e)); } }} />
         {lock ? <Button title="Turn off app lock" variant="secondary" onPress={async () => { await disableLock(); setLock(false); }} /> : (
           <><Field label="New PIN (4-8 digits)" value={pin} onChangeText={setPinText} keyboardType="number-pad" secureTextEntry maxLength={8} /><Button title="Enable app lock" disabled={pin.length < 4} onPress={saveLock} /></>
         )}

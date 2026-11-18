@@ -40,7 +40,7 @@ export default function Goals() {
       {(data ?? []).map((g) => (
         <Card key={g.id}>
           <Row style={{ justifyContent: 'space-between' }}><Text variant="h2" style={{ flex: 1 }}>{g.title}</Text><Pill tone={g.status === 'completed' ? 'success' : g.status === 'abandoned' ? 'muted' : 'primary'} text={g.status.toUpperCase()} /></Row>
-          <View style={{ height: 8, borderRadius: 4, backgroundColor: '#8884', overflow: 'hidden' }}><View style={{ width: `${Math.round(g.progress * 100)}%`, height: 8, backgroundColor: '#2FD39B' }} /></View>
+          <View style={{ height: 8, borderRadius: 4, backgroundColor: '#8884', overflow: 'hidden' }}><View style={{ width: `${Math.round(g.progress * 100)}%`, height: 8, backgroundColor: '#FF964F' }} /></View>
           <Text variant="muted">{shown(g)} · {Math.round(g.progress * 100)}%</Text>
           <Row>
             {g.status === 'active' ? <Button title="Abandon" variant="secondary" onPress={() => abandon.mutate(g.id)} /> : null}

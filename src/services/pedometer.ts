@@ -25,3 +25,12 @@ export async function stepsToday(): Promise<number | null> {
   const start = new Date(); start.setHours(0, 0, 0, 0);
   try { return (await Pedometer.getStepCountAsync(start, new Date())).steps; } catch { return null; }
 }
+
+/**
+ * Live step counting. Works on Android and iOS, but only while this subscription is alive
+ * (i.e. while the app is open): `onSteps` receives steps counted since the subscription began.
+ */
+export function watchSteps(onSteps: (sinceStart: number) => void): () => void {
+  const sub = Pedometer.watchStepCount((r) => onSteps(r.steps));
+  return () => sub.remove();
+}

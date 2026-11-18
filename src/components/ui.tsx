@@ -43,7 +43,7 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading,
 }) {
   const { colors } = useTheme();
   const bg = { primary: colors.primary, secondary: colors.surfaceAlt, danger: colors.danger, ghost: 'transparent' }[variant];
-  const fg = { primary: colors.onPrimary, secondary: colors.text, danger: '#FFFFFF', ghost: colors.primary }[variant];
+  const fg = { primary: colors.onPrimary, secondary: colors.text, danger: '#FFFFFF', ghost: colors.primaryText }[variant];
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!disabled }} disabled={disabled || loading} onPress={onPress}
       style={({ pressed }) => [{ minHeight: MIN_TOUCH + 4, borderRadius: radius.md, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: space.sm, paddingHorizontal: space.lg, opacity: disabled ? 0.45 : pressed ? 0.85 : 1 }, style]}>
@@ -127,7 +127,7 @@ export function Divider() {
 
 export function Pill({ text, tone = 'muted' }: { text: string; tone?: 'muted' | 'success' | 'warning' | 'danger' | 'primary' }) {
   const { colors } = useTheme();
-  const c = { muted: colors.textMuted, success: colors.success, warning: colors.warning, danger: colors.danger, primary: colors.primary }[tone];
+  const c = { muted: colors.textMuted, success: colors.success, warning: colors.warning, danger: colors.danger, primary: colors.primaryText }[tone];
   return <View style={{ borderColor: c, borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 }}><RNText style={{ color: c, fontSize: font.xs, fontWeight: '700' }}>{text}</RNText></View>;
 }
 

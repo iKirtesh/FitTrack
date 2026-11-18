@@ -63,7 +63,7 @@ export function DatabaseProvider({ children }: { children: (repos: Repos) => Rea
       </View>
     );
   }
-  if (!repos) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0B0F14' }}><ActivityIndicator color="#2FD39B" /></View>;
+  if (!repos) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0B0F14' }}><ActivityIndicator color="#FF964F" /></View>;
   return (
     <QueryClientProvider client={queryClient}>
       <ReposCtx.Provider value={repos}>{children(repos)}</ReposCtx.Provider>

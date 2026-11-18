@@ -35,7 +35,7 @@ export default function Counters() {
             <Button title="-" variant="secondary" onPress={() => add.mutate({ id: c.id, delta: -c.step })} />
             <Button title={`+${c.step}`} onPress={() => add.mutate({ id: c.id, delta: c.step })} />
           </Row>
-          {c.dailyTarget ? <View style={{ height: 8, borderRadius: 4, backgroundColor: '#8884', overflow: 'hidden' }}><View style={{ height: 8, width: `${Math.min(100, (c.today / c.dailyTarget) * 100)}%`, backgroundColor: '#2FD39B' }} /></View> : null}
+          {c.dailyTarget ? <View style={{ height: 8, borderRadius: 4, backgroundColor: '#8884', overflow: 'hidden' }}><View style={{ height: 8, width: `${Math.min(100, (c.today / c.dailyTarget) * 100)}%`, backgroundColor: '#FF964F' }} /></View> : null}
           <Row>
             <Button variant="ghost" title={open === c.id ? 'Hide stats' : 'Stats'} onPress={() => setOpen(open === c.id ? null : c.id)} />
             <Button variant="ghost" title="Undo" onPress={() => undo.mutate(c.id)} />

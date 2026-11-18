@@ -74,7 +74,7 @@ export default function Backup() {
         <Button title="Restore from backup file" variant="secondary" onPress={restore} />
         <Text variant="muted">The file is checked before anything changes, and a restore is all-or-nothing.</Text>
       </Card>
-      {msg ? <Text style={{ color: '#2FD39B' }}>{msg}</Text> : null}
+      {msg ? <Text style={{ color: '#FF964F' }}>{msg}</Text> : null}
       <Card>
         <SectionHeader title="Delete" />
         <Button title="Clear workout history" variant="danger" onPress={clearWorkouts} />

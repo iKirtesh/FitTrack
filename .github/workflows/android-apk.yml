@@ -1,0 +1,82 @@
+name: Build Android APK
+
+# Builds an installable APK in GitHub's cloud and publishes it as a GitHub Release.
+# Run it from the Actions tab ("Run workflow"), or it runs on every push to main.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write # needed to create the release
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Typecheck and test
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Generate the native Android project
+        run: npx expo prebuild --platform android --no-install
+        env:
+          CI: '1'
+
+      - name: Build release APK (arm64 + armv7)
+        working-directory: android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a --no-daemon
+
+      - name: Name the APK
+        run: |
+          SHORT=$(git rev-parse --short HEAD)
+          cp android/app/build/outputs/apk/release/app-release.apk "FitTrack-${SHORT}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "FitTrack-latest.apk"
+          ls -lh FitTrack-*.apk
+          echo "SHORT=$SHORT" >> "$GITHUB_ENV"
+
+      - name: Keep the APK as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FitTrack-apk
+          path: FitTrack-*.apk
+          retention-days: 30
+
+      - name: Publish a GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: FitTrack APK build ${{ github.run_number }} (${{ env.SHORT }})
+          body: |
+            Android APK built from commit ${{ github.sha }}.
+
+            **Install:** open this release on your phone, download `FitTrack-latest.apk`, open it, and allow "Install unknown apps" for your browser when asked.
+            Signed with the standard Expo debug key, so it is for personal sideloading, not the Play Store. Later builds install over earlier ones and keep your data.
+          files: |
+            FitTrack-${{ env.SHORT }}.apk
+            FitTrack-latest.apk
+          make_latest: true

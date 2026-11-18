@@ -118,7 +118,7 @@ export function dailyActivityRepo(db: AppDb) {
     get(date: string = localDay()) {
       return db.select().from(dailyActivity).where(eq(dailyActivity.date, date)).get() ?? { date, steps: 0, stepsSource: 'manual', caloriesEstimate: null, waterMl: 0, updatedAt: 0 };
     },
-    setSteps(date: string, steps: number, source: 'manual' | 'pedometer', now: number = Date.now()): void {
+    setSteps(date: string, steps: number, source: 'manual' | 'pedometer' | 'health_connect', now: number = Date.now()): void {
       if (!Number.isInteger(steps) || steps < 0 || steps > 200_000) throw new DataError('Steps must be a whole number between 0 and 200,000');
       db.insert(dailyActivity).values({ date, steps, stepsSource: source, updatedAt: now })
         .onConflictDoUpdate({ target: dailyActivity.date, set: { steps, stepsSource: source, updatedAt: now } }).run();

@@ -31,7 +31,9 @@
         "ACCESS_FINE_LOCATION",
         "POST_NOTIFICATIONS",
         "USE_BIOMETRIC",
-        "USE_FINGERPRINT"
+        "USE_FINGERPRINT",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_WEIGHT"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -52,7 +54,18 @@
       ],
       "expo-notifications",
       "expo-image-picker",
-      "expo-local-authentication"
+      "expo-local-authentication",
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "minSdkVersion": 26
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -8,6 +8,7 @@ import { useDbMutation, useDbQuery } from '@/hooks/data';
 import { useUnits } from '@/hooks/units';
 import { stepSupport, stepsToday, watchSteps } from '@/services/pedometer';
 import { notify } from '@/services/dialogs';
+import { importFromHealthConnect } from '@/services/healthconnect';
 import { addDays, localDay, parseDay } from '@/utils/dates';
 import { formatDuration } from '@/utils/units';
 
@@ -54,6 +55,18 @@ export default function Activity() {
     stop.current = watchSteps((since) => saveLive.mutate(baseline + since));
     setLive(true);
   });
+  const importHc = useDbMutation(async (r, _: void) => {
+    const res = await importFromHealthConnect(30);
+    if (!res.ok) { notify('Health Connect', res.reason); return; }
+    let steps = 0, weights = 0;
+    for (const d of res.data.steps) {
+      // Never lower a value you may have entered yourself.
+      if (d.steps > r.daily.get(d.date).steps) { r.daily.setSteps(d.date, d.steps, 'health_connect'); steps++; }
+    }
+    const have = new Set(r.measurements.list({ from: addDays(today, -30) }).filter((m) => m.weightKg != null).map((m) => m.date));
+    for (const w of res.data.weights) { if (!have.has(w.date)) { r.measurements.create({ date: w.date, weightKg: w.weightKg, notes: 'Imported from Health Connect' }); have.add(w.date); weights++; } }
+    notify('Health Connect import done', `${steps} day(s) of steps updated and ${weights} weight entr${weights === 1 ? 'y' : 'ies'} added from the last 30 days. Nothing was overwritten with a lower value.`);
+  });
   const del = useDbMutation((r, a: { kind: 'run' | 'cardio'; id: string }) => (a.kind === 'run' ? r.running.remove(a.id) : r.cardio.remove(a.id)));
   const target = data?.profile?.dailyStepTarget ?? 8000;
   const bump = useDbMutation((r, a: { id: string; delta: number }) => r.counters.add(a.id, a.delta));
@@ -70,7 +83,7 @@ export default function Activity() {
               <Button style={{ flex: 1 }} variant="secondary" title={live ? 'Stop counting' : Platform.OS === 'ios' ? 'Phone sensor' : 'Count steps'} onPress={() => sensor.mutate()} /></Row>
           </View>
         </Row>
-        <Text variant="muted">{data?.daily.stepsSource === 'pedometer' ? (live ? 'Counting steps while this app is open. Stops when you leave the app.' : 'Last value came from the phone step sensor.') : 'Value was entered manually. FitTrack does not count steps in the background.'}</Text>
+        <Text variant="muted">{data?.daily.stepsSource === 'health_connect' ? 'Last value was imported from Health Connect.' : data?.daily.stepsSource === 'pedometer' ? (live ? 'Counting steps while this app is open. Stops when you leave the app.' : 'Last value came from the phone step sensor.') : 'Value was entered manually. FitTrack does not count steps in the background.'}</Text>
       </Card>
 
       <Card>
@@ -81,6 +94,7 @@ export default function Activity() {
         <Text variant="muted">Minutes come from logged runs and cardio only.</Text>
       </Card>
 
+      {Platform.OS === 'android' ? <Button variant="secondary" title="Import steps & weight from Health Connect" onPress={() => importHc.mutate()} /> : null}
       <Row>
         <Button style={{ flex: 1 }} title={data?.activeRun ? 'Resume GPS run' : 'Start run / walk'} onPress={() => router.push('/run/track')} />
         <Button style={{ flex: 1 }} variant="secondary" title="Log manually" onPress={() => router.push('/run/manual')} />

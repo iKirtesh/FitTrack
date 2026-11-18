@@ -14,7 +14,11 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "FitTrack uses your location to record the route, distance and pace of your runs and walks. Location data never leaves your device.",
         "NSPhotoLibraryUsageDescription": "FitTrack lets you pick a profile photo and progress photos. They are stored only on your device.",
-        "NSFaceIDUsageDescription": "FitTrack can use Face ID to unlock the app if you enable the app lock."
+        "NSFaceIDUsageDescription": "FitTrack can use Face ID to unlock the app if you enable the app lock.",
+        "NSLocalNetworkUsageDescription": "FitTrack connects to your own sync server on your Wi-Fi to share your data between your devices.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
       }
     },
     "android": {
@@ -62,7 +66,8 @@
           "android": {
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
-            "minSdkVersion": 26
+            "minSdkVersion": 26,
+            "usesCleartextTraffic": true
           }
         }
       ]

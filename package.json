@@ -75,7 +75,8 @@
     "build:web": "expo export --platform web && node scripts/postexport-web.js",
     "serve:web": "node scripts/serve-dist.js",
     "e2e:web": "node e2e/web-smoke.js",
-    "e2e:web:full": "node e2e/web-full.js"
+    "e2e:web:full": "node e2e/web-full.js",
+    "sync:server": "node scripts/sync-server.js"
   },
   "private": true
 }

@@ -83,3 +83,9 @@ Schema changes: edit `src/database/schema/*`, run `npm run db:generate`, commit 
 
 ## Health Connect import (Android)
 Settings → Health Connect → auto sync imports the last 7 days on app open (max every 15 min; no background service). Activity tab → "Import steps & weight from Health Connect" reads the last 30 days of steps (de-duplicated by Health Connect aggregation) and weight. Steps never overwrite a higher existing value; weights are skipped if that day already has one. Read-only. NOT verified on a physical device; Health Connect must be installed (built in on Android 14+).
+
+## LAN sync (no accounts)
+`npm run sync:server` serves the web build and a merge API (scripts/sync-server.js, scripts/sync-merge.js). Apps sync from
+Settings > Sync across devices. Merge-only (union by key, first seen wins, profile first-wins); edits/deletes do not propagate.
+Verified by tests with two databases through the real server; NOT yet verified in a browser or on a phone. Android release
+builds enable cleartext HTTP (needed for http://192.168.x.x) via expo-build-properties.

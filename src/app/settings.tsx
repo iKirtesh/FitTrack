@@ -3,11 +3,13 @@ import { Linking, Platform, Switch, View } from 'react-native';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
 import { checkForUpdate } from '@/services/updates';
+import { SYNC_CODE_KEY, SYNC_LAST_KEY, SYNC_URL_KEY, normalizeServerUrl, syncWithServer } from '@/features/sync/sync';
+import { defaultServerUrl } from '@/features/sync/defaults';
 import { useRouter } from 'expo-router';
 import { Button, Card, Chip, ChipRow, Divider, Field, Row, Screen, SectionHeader, Segmented, Text } from '@/components/ui';
 import { DASHBOARD_CARDS, DEFAULT_CARDS, type DashboardCardId } from '@/constants/dashboard';
 import { WEEKDAYS } from '@/constants/profile';
-import { useDbMutation, useDbQuery, useRepos } from '@/hooks/data';
+import { useDbMutation, useDbQuery, useInvalidateAll, useRepos } from '@/hooks/data';
 import { useTheme, type ThemeMode } from '@/theme/ThemeProvider';
 import { AUTO_KEY, applyHealthImport } from '@/features/health/sync';
 import { importFromHealthConnect } from '@/services/healthconnect';
@@ -24,6 +26,7 @@ export default function Settings() {
   const ota = Updates.useUpdates();
   const router = useRouter();
   const repos = useRepos();
+  const refreshAll = useInvalidateAll();
   const { mode, setMode } = useTheme();
   const { data } = useDbQuery(['settings'], (r) => ({ cards: r.settings.get<DashboardCardId[]>('dashboard.cards', DEFAULT_CARDS), reminders: r.reminders.list() }));
   const [lock, setLock] = useState(false);
@@ -44,6 +47,20 @@ export default function Settings() {
     applyHealthImport(r, res.data);
     r.settings.set(AUTO_KEY, true);
   });
+  const [syncUrl, setSyncUrl] = useState(() => repos.settings.get<string>(SYNC_URL_KEY, '') || defaultServerUrl());
+  const [syncCode, setSyncCode] = useState(() => repos.settings.get<string>(SYNC_CODE_KEY, ''));
+  const [syncing, setSyncing] = useState(false);
+  const lastSync = repos.settings.get<number>(SYNC_LAST_KEY, 0);
+  const doSync = async () => {
+    setSyncing(true);
+    try {
+      repos.settings.set(SYNC_URL_KEY, normalizeServerUrl(syncUrl)); repos.settings.set(SYNC_CODE_KEY, syncCode.trim());
+      const r = await syncWithServer(repos.db, syncUrl, syncCode);
+      repos.settings.set(SYNC_LAST_KEY, Date.now());
+      await refreshAll();
+      notify('Sync complete', r.added ? `${r.added} new item(s) came from your other devices.` : 'Everything was already in sync. Your data was also sent to the server.');
+    } catch (e) { notify('Sync failed', errorMessage(e)); } finally { setSyncing(false); }
+  };
   const setCards = useDbMutation((r, c: DashboardCardId[]) => r.settings.set('dashboard.cards', c));
   const apply = async (rem: Reminder, enabled: boolean) => {
     await cancelIds(rem.notificationIds);
@@ -100,6 +117,15 @@ export default function Settings() {
         <ChipRow>{WEEKDAYS.map((w, i) => <Chip key={w} label={w} selected={days.includes(i)} onPress={() => setDays((d) => (d.includes(i) ? d.filter((x) => x !== i) : [...d, i]))} />)}</ChipRow>
         <Field label="Time (24h)" value={time} onChangeText={setTime} autoCapitalize="none" />
         <Button title="Add reminder" disabled={days.length === 0} onPress={() => addRem.mutate()} />
+      </Card>
+
+      <Card>
+        <SectionHeader title="Sync across devices" />
+        <Text variant="muted">Share your data between this app and the website over your own Wi-Fi. Run the sync server on your computer (see docs/SYNC.md), then enter its address and pairing code. No account is needed. New items are merged both ways; edits and deletions are not synced, so nothing is ever lost.</Text>
+        <Field label="Server address" value={syncUrl} onChangeText={setSyncUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder="http://192.168.1.20:8787" />
+        <Field label="Pairing code" value={syncCode} onChangeText={setSyncCode} keyboardType="number-pad" secureTextEntry />
+        <Button title={syncing ? 'Syncing…' : 'Sync now'} disabled={syncing || !syncUrl.trim() || !syncCode.trim()} onPress={() => void doSync()} />
+        <Text variant="muted">{lastSync ? `Last synced ${new Date(lastSync).toLocaleString()}.` : 'Not synced yet.'}</Text>
       </Card>
 
       {Platform.OS === 'android' ? (

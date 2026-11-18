@@ -38,12 +38,17 @@ const BACK: Shape[] = [
 const names = (ids: string[]) => ids.map((i) => MUSCLE_GROUPS.find((m) => m.id === i)?.name ?? i);
 
 /** Front and back figure with the primary muscle highlighted and secondary muscles tinted. */
-export function MuscleMap({ primary, secondary = [], height = 190 }: { primary: string; secondary?: string[]; height?: number }) {
+export function MuscleMap({ primary = '', secondary = [], heat, height = 190 }: { primary?: string; secondary?: string[]; /** Optional training load per muscle-group id (any positive scale); shades each region by its share of the maximum. */ heat?: Record<string, number>; height?: number }) {
   const { colors } = useTheme();
   const main = new Set(EXPAND[primary] ?? []);
   const sec = new Set(secondary.flatMap((s) => EXPAND[s] ?? []));
-  const fill = (region: string) => (main.has(region) ? colors.primary : sec.has(region) ? colors.warning : colors.surfaceAlt);
-  const opacity = (region: string) => (main.has(region) ? 1 : sec.has(region) ? 0.8 : 1);
+  const regionHeat = new Map<string, number>();
+  if (heat) {
+    const top = Math.max(0, ...Object.values(heat));
+    for (const [g, v] of Object.entries(heat)) for (const reg of EXPAND[g] ?? []) regionHeat.set(reg, Math.max(regionHeat.get(reg) ?? 0, top ? v / top : 0));
+  }
+  const fill = (region: string) => (heat ? ((regionHeat.get(region) ?? 0) > 0 ? colors.primary : colors.surfaceAlt) : main.has(region) ? colors.primary : sec.has(region) ? colors.warning : colors.surfaceAlt);
+  const opacity = (region: string) => (heat ? 0.25 + 0.75 * (regionHeat.get(region) ?? 0) : main.has(region) ? 1 : sec.has(region) ? 0.8 : 1);
   const body = colors.border;
 
   const draw = (shapes: Shape[], dx: number) => (
@@ -62,7 +67,7 @@ export function MuscleMap({ primary, secondary = [], height = 190 }: { primary: 
     </G>
   );
 
-  const label = `Muscles worked: primary ${names([primary]).join(', ')}${secondary.length ? `; secondary ${names(secondary).join(', ')}` : ''}`;
+  const label = heat ? `Muscles trained: ${Object.entries(heat).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([g]) => names([g])[0]).join(', ') || 'none'}` : `Muscles worked: primary ${names([primary]).join(', ')}${secondary.length ? `; secondary ${names(secondary).join(', ')}` : ''}`;
   return (
     <Svg width="100%" height={height} viewBox="0 0 220 190" accessibilityLabel={label} role="img">
       {draw(FRONT, 5)}

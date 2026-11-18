@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button, Card, EmptyState, Row, Screen, SectionHeader, Segmented, Stat, Text } from '@/components/ui';
 import { BarChart, LineChart } from '@/components/charts/Charts';
+import { MuscleMap } from '@/components/MuscleMap';
 import { MUSCLE_GROUPS } from '@/constants/exercise';
 import { RANGES, type RangeKey } from '@/database/repositories/analytics';
 import { useDbQuery } from '@/hooks/data';
@@ -41,6 +42,8 @@ export default function Progress() {
         {w.weekly.length ? <><Text variant="label">Workouts per week</Text><BarChart data={w.weekly.slice(-12).map((x) => ({ label: short(x.date), value: x.value }))} highlightLast /></> : null}
         {w.muscleDistribution.length ? (
           <View style={{ gap: 6 }}>
+            <Text variant="label">Body parts trained (darker = more sets)</Text>
+            <MuscleMap heat={Object.fromEntries(w.muscleDistribution.map((m) => [m.groupId, m.share]))} height={220} />
             <Text variant="label">Muscle group distribution (share of completed sets)</Text>
             <BarChart data={w.muscleDistribution.slice(0, 8).map((m) => ({ label: groupName(m.groupId).slice(0, 5), value: Math.round(m.share * 100) }))} formatValue={(n) => `${n}%`} />
           </View>

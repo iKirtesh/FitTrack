@@ -9,6 +9,7 @@ import { useUnits } from '@/hooks/units';
 import { stepSupport, stepsToday, watchSteps } from '@/services/pedometer';
 import { notify } from '@/services/dialogs';
 import { importFromHealthConnect } from '@/services/healthconnect';
+import { applyHealthImport } from '@/features/health/sync';
 import { addDays, localDay, parseDay } from '@/utils/dates';
 import { formatDuration } from '@/utils/units';
 
@@ -58,13 +59,7 @@ export default function Activity() {
   const importHc = useDbMutation(async (r, _: void) => {
     const res = await importFromHealthConnect(30);
     if (!res.ok) { notify('Health Connect', res.reason); return; }
-    let steps = 0, weights = 0;
-    for (const d of res.data.steps) {
-      // Never lower a value you may have entered yourself.
-      if (d.steps > r.daily.get(d.date).steps) { r.daily.setSteps(d.date, d.steps, 'health_connect'); steps++; }
-    }
-    const have = new Set(r.measurements.list({ from: addDays(today, -30) }).filter((m) => m.weightKg != null).map((m) => m.date));
-    for (const w of res.data.weights) { if (!have.has(w.date)) { r.measurements.create({ date: w.date, weightKg: w.weightKg, notes: 'Imported from Health Connect' }); have.add(w.date); weights++; } }
+    const { steps, weights } = applyHealthImport(r, res.data);
     notify('Health Connect import done', `${steps} day(s) of steps updated and ${weights} weight entr${weights === 1 ? 'y' : 'ies'} added from the last 30 days. Nothing was overwritten with a lower value.`);
   });
   const del = useDbMutation((r, a: { kind: 'run' | 'cardio'; id: string }) => (a.kind === 'run' ? r.running.remove(a.id) : r.cardio.remove(a.id)));

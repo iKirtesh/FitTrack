@@ -6,6 +6,8 @@ import { DASHBOARD_CARDS, DEFAULT_CARDS, type DashboardCardId } from '@/constant
 import { WEEKDAYS } from '@/constants/profile';
 import { useDbMutation, useDbQuery, useRepos } from '@/hooks/data';
 import { useTheme, type ThemeMode } from '@/theme/ThemeProvider';
+import { AUTO_KEY, applyHealthImport } from '@/features/health/sync';
+import { importFromHealthConnect } from '@/services/healthconnect';
 import { disableLock, getLockEmail, isGmail, isLockEnabled, lockIsSecureStorage, setLockEmail, setPin } from '@/features/settings/lock';
 import { cancelIds, ensurePermission, notificationsSupported, scheduleReminder } from '@/services/notifications';
 import { errorMessage, notify } from '@/services/dialogs';
@@ -30,6 +32,14 @@ export default function Settings() {
   const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5]);
   useEffect(() => { void isLockEnabled().then(setLock); }, []);
 
+  const autoHc = repos.settings.get<boolean>(AUTO_KEY, false);
+  const toggleHc = useDbMutation(async (r, _: void) => {
+    if (r.settings.get<boolean>(AUTO_KEY, false)) { r.settings.set(AUTO_KEY, false); return; }
+    const res = await importFromHealthConnect(7, true); // asks for permission once
+    if (!res.ok) { notify('Health Connect', res.reason); return; }
+    applyHealthImport(r, res.data);
+    r.settings.set(AUTO_KEY, true);
+  });
   const setCards = useDbMutation((r, c: DashboardCardId[]) => r.settings.set('dashboard.cards', c));
   const apply = async (rem: Reminder, enabled: boolean) => {
     await cancelIds(rem.notificationIds);
@@ -87,6 +97,14 @@ export default function Settings() {
         <Field label="Time (24h)" value={time} onChangeText={setTime} autoCapitalize="none" />
         <Button title="Add reminder" disabled={days.length === 0} onPress={() => addRem.mutate()} />
       </Card>
+
+      {Platform.OS === 'android' ? (
+        <Card>
+          <SectionHeader title="Health Connect" />
+          <Text variant="muted">When on, FitTrack imports the last 7 days of steps and weight from Health Connect when you open the app (at most every 15 minutes). It does not sync in the background while the app is closed.</Text>
+          <Button title={autoHc ? 'Turn off auto sync' : 'Turn on auto sync'} variant={autoHc ? 'secondary' : 'primary'} onPress={() => toggleHc.mutate()} />
+        </Card>
+      ) : null}
 
       <Card>
         <SectionHeader title="App lock" />

@@ -82,4 +82,4 @@ Schema changes: edit `src/database/schema/*`, run `npm run db:generate`, commit 
 - Personal records are derived from recorded data and rebuilt after changes, so deleting data can never leave a stale record.
 
 ## Health Connect import (Android)
-Activity tab → "Import steps & weight from Health Connect" reads the last 30 days of steps (de-duplicated by Health Connect aggregation) and weight. Steps never overwrite a higher existing value; weights are skipped if that day already has one. Read-only. NOT verified on a physical device; Health Connect must be installed (built in on Android 14+).
+Settings → Health Connect → auto sync imports the last 7 days on app open (max every 15 min; no background service). Activity tab → "Import steps & weight from Health Connect" reads the last 30 days of steps (de-duplicated by Health Connect aggregation) and weight. Steps never overwrite a higher existing value; weights are skipped if that day already has one. Read-only. NOT verified on a physical device; Health Connect must be installed (built in on Android 14+).

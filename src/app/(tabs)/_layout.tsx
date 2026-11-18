@@ -3,6 +3,7 @@ import { useWindowDimensions } from 'react-native';
 import { Redirect, Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '@/hooks/data';
+import { useAutoHealthSync } from '@/features/health/sync';
 import { useTheme } from '@/theme/ThemeProvider';
 
 type Icon = React.ComponentProps<typeof Ionicons>['name'];
@@ -20,6 +21,7 @@ export default function TabsLayout() {
   const { width } = useWindowDimensions();
   const wide = width >= 900; // web / tablets get a side rail instead of a bottom bar
   const profile = useProfile();
+  useAutoHealthSync();
   // A cached "no profile" must not redirect while a refetch is still in flight (e.g. just after onboarding).
   if (profile.isLoading || (profile.isFetching && !profile.data)) return null;
   if (!profile.data) return <Redirect href="/onboarding" />;

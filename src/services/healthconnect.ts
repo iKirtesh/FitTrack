@@ -14,7 +14,7 @@ const PERMISSIONS = [
   { accessType: 'read', recordType: 'Weight' },
 ] as const;
 
-export async function importFromHealthConnect(days = 30): Promise<HealthResult> {
+export async function importFromHealthConnect(days = 30, prompt = true): Promise<HealthResult> {
   if (Platform.OS !== 'android') return { ok: false, reason: 'Health Connect is only available on Android.' };
   try {
     // Required lazily so web, iOS and tests never load the native module.
@@ -23,7 +23,8 @@ export async function importFromHealthConnect(days = 30): Promise<HealthResult> 
     const status = await hc.getSdkStatus();
     if (status !== hc.SdkAvailabilityStatus.SDK_AVAILABLE) return { ok: false, reason: 'Health Connect is not installed or needs an update. Install or update it from Google Play, then try again.' };
     if (!(await hc.initialize())) return { ok: false, reason: 'Health Connect could not be started.' };
-    const granted = await hc.requestPermission([...PERMISSIONS]);
+    // Automatic runs never show a permission dialog; they only use what was already granted.
+    const granted = prompt ? await hc.requestPermission([...PERMISSIONS]) : await hc.getGrantedPermissions();
     const has = (t: string) => granted.some((p) => p.recordType === t && p.accessType === 'read');
     if (!has('Steps') && !has('Weight')) return { ok: false, reason: 'No Health Connect permission was granted, so nothing was imported.' };
 

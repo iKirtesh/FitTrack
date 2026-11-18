@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, Switch, View } from 'react-native';
+import { Linking, Platform, Switch, View } from 'react-native';
+import Constants from 'expo-constants';
+import { checkForUpdate } from '@/services/updates';
 import { useRouter } from 'expo-router';
 import { Button, Card, Chip, ChipRow, Divider, Field, Row, Screen, SectionHeader, Segmented, Text } from '@/components/ui';
 import { DASHBOARD_CARDS, DEFAULT_CARDS, type DashboardCardId } from '@/constants/dashboard';
@@ -10,7 +12,7 @@ import { AUTO_KEY, applyHealthImport } from '@/features/health/sync';
 import { importFromHealthConnect } from '@/services/healthconnect';
 import { disableLock, getLockEmail, isGmail, isLockEnabled, lockIsSecureStorage, setLockEmail, setPin } from '@/features/settings/lock';
 import { cancelIds, ensurePermission, notificationsSupported, scheduleReminder } from '@/services/notifications';
-import { errorMessage, notify } from '@/services/dialogs';
+import { confirm, errorMessage, notify } from '@/services/dialogs';
 import { reminderSchema } from '@/types/schemas';
 import type { Reminder } from '@/database/repositories/reminders';
 
@@ -97,6 +99,19 @@ export default function Settings() {
         <Field label="Time (24h)" value={time} onChangeText={setTime} autoCapitalize="none" />
         <Button title="Add reminder" disabled={days.length === 0} onPress={() => addRem.mutate()} />
       </Card>
+
+      {Platform.OS === 'android' ? (
+        <Card>
+          <SectionHeader title="App updates" />
+          <Text variant="muted">Build {Constants.expoConfig?.android?.versionCode ?? 'unknown'}. Checks GitHub for a newer APK. Android still asks you to confirm the install; your data is kept.</Text>
+          <Button title="Check for updates" variant="secondary" onPress={async () => {
+            const r = await checkForUpdate();
+            if (r.status === 'error') notify('Update check failed', r.reason);
+            else if (r.status === 'current') notify('Up to date', `You have the newest build (${r.current}).`);
+            else if (await confirm('Update available', `Build ${r.build} is ready (you have ${r.current}). Download it now? Open the downloaded file to install.`, 'Download')) void Linking.openURL(r.url);
+          }} />
+        </Card>
+      ) : null}
 
       {Platform.OS === 'android' ? (
         <Card>

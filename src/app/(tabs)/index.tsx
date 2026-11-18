@@ -6,7 +6,9 @@ import { Button, Card, EmptyState, Pill, Row, Screen, SectionHeader, Stat, Text 
 import { MuscleMap, muscleNames } from '@/components/MuscleMap';
 import { DEFAULT_CARDS, type DashboardCardId } from '@/constants/dashboard';
 import { RUN_ACTIVITIES } from '@/constants/activities';
-import { useDbQuery } from '@/hooks/data';
+import { useDbQuery, useInvalidateAll, useRepos } from '@/hooks/data';
+import { errorMessage, notify } from '@/services/dialogs';
+import { useTheme } from '@/theme/ThemeProvider';
 import { useUnits } from '@/hooks/units';
 import { greeting, localDay, parseDay, startOfWeek } from '@/utils/dates';
 import { formatDuration } from '@/utils/units';
@@ -15,7 +17,10 @@ import { recordLabel, recordValue } from '@/features/records/labels';
 export default function Home() {
   const router = useRouter();
   const u = useUnits();
+  const { colors } = useTheme();
   const today = localDay();
+  const repos = useRepos();
+  const refresh = useInvalidateAll();
   const { data } = useDbQuery(['home', today], (r) => {
     const profile = r.profile.get();
     const weekStart = startOfWeek(today);
@@ -35,6 +40,9 @@ export default function Home() {
       ].sort((a, b) => b.when - a.when).slice(0, 5),
       records: r.records.recent(3),
       muscles: r.analytics.muscleLoadForDay(today),
+      streaks: r.analytics.streaks(today),
+      weeklyTarget: r.settings.get<number>('weekly.workouts', 3),
+      lastWorkout: r.workouts.history({ limit: 1 })[0] ?? null,
       cards: r.settings.get<DashboardCardId[]>('dashboard.cards', DEFAULT_CARDS),
     };
   });
@@ -66,6 +74,38 @@ export default function Home() {
             <ProgressRing value={profile.dailyWaterTargetMl ? (water?.today ?? 0) / profile.dailyWaterTargetMl : 0} label={`${Math.round(water?.today ?? 0)}`} sub={`of ${profile.dailyWaterTargetMl} ml water`} color="#4C8DFF" />
           </Row>
           <Text variant="muted">{data.daily.stepsSource === 'pedometer' ? 'Steps from your phone sensor.' : 'Steps are entered manually. Update them from the Activity tab.'}</Text>
+        </Card>
+      ) : null}
+
+      {show('week') ? (
+        <Card>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <View><Text variant="h1">{data.streaks.current > 0 ? `🔥 ${data.streaks.current}` : '0'}<Text variant="muted">  day streak</Text></Text><Text variant="muted">Best: {data.streaks.best} day{data.streaks.best === 1 ? '' : 's'}</Text></View>
+          </Row>
+          <Row style={{ justifyContent: 'space-between' }}>
+            {data.streaks.weekDays.map((d) => (
+              <View key={d.date} style={{ alignItems: 'center', gap: 4 }}>
+                <View accessibilityLabel={`${d.date}: ${d.active ? 'active' : d.future ? 'upcoming' : 'no activity'}`} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: d.active ? colors.primary : colors.surfaceAlt, borderWidth: d.date === today ? 2 : 0, borderColor: colors.primaryText, opacity: d.future ? 0.5 : 1 }} />
+                <Text variant="muted">{'SMTWTFS'[parseDay(d.date).getDay()]}</Text>
+              </View>
+            ))}
+          </Row>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <Text variant="label">Weekly goal: {data.streaks.weekWorkouts} of {data.weeklyTarget} workouts</Text>
+            <Row style={{ gap: 4 }}>
+              <Button title="-" variant="secondary" disabled={data.weeklyTarget <= 1} onPress={() => { repos.settings.set('weekly.workouts', data.weeklyTarget - 1); void refresh(); }} />
+              <Button title="+" variant="secondary" disabled={data.weeklyTarget >= 14} onPress={() => { repos.settings.set('weekly.workouts', data.weeklyTarget + 1); void refresh(); }} />
+            </Row>
+          </Row>
+          <View style={{ height: 10, borderRadius: 5, backgroundColor: colors.track, overflow: 'hidden' }}>
+            <View style={{ height: 10, width: `${Math.min(100, (data.streaks.weekWorkouts / data.weeklyTarget) * 100)}%`, backgroundColor: data.streaks.weekWorkouts >= data.weeklyTarget ? colors.success : colors.primary }} />
+          </View>
+          {data.streaks.weekWorkouts >= data.weeklyTarget ? <Text variant="muted">Weekly goal reached. Anything more is a bonus.</Text> : null}
+          {data.lastWorkout ? (
+            <Button variant="secondary" disabled={!!data.activeWorkout} title={`Repeat last workout: ${data.lastWorkout.name}`} onPress={() => {
+              try { repos.workouts.repeat(data.lastWorkout!.id); void refresh(); router.push('/workout/active'); } catch (e) { notify('Cannot repeat workout', errorMessage(e)); }
+            }} />
+          ) : null}
         </Card>
       ) : null}
 

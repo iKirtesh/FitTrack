@@ -2,15 +2,16 @@ import React from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MuscleMap } from '@/components/MuscleMap';
 import { Button, Card, Pill, Row, Screen, Stat, Text } from '@/components/ui';
-import { useDbMutation, useDbQuery } from '@/hooks/data';
+import { useDbMutation, useDbQuery, useRepos } from '@/hooks/data';
 import { useUnits } from '@/hooks/units';
-import { confirm } from '@/services/dialogs';
+import { confirm, errorMessage, notify } from '@/services/dialogs';
 import { formatDuration } from '@/utils/units';
 
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const u = useUnits();
+  const repos = useRepos();
   const { data: w } = useDbQuery(['workout', id], (r) => { try { return r.workouts.getDetail(id); } catch { return null; } });
   const del = useDbMutation((r, _: void) => r.workouts.remove(id), { onSuccess: () => router.back() });
   const heat: Record<string, number> = {};
@@ -24,6 +25,7 @@ export default function WorkoutDetail() {
         <Row><Stat label="Duration" value={formatDuration(w.durationSec)} /><Stat label="Volume" value={u.weight(w.totalVolumeKg, 0)} /><Stat label="Sets" value={String(w.setCount)} /></Row>
         <Row><Stat label="RPE" value={w.rpe != null ? String(w.rpe) : '-'} /><Stat label="Calories (est.)" value={w.caloriesEstimate != null ? String(w.caloriesEstimate) : '-'} sub="MET-based estimate" /></Row>
       </Card>
+      {w.status === 'completed' ? <Button title="Repeat this workout" variant="secondary" onPress={() => { try { repos.workouts.repeat(w.id); router.push('/workout/active'); } catch (e) { notify('Cannot repeat workout', errorMessage(e)); } }} /> : null}
       {heat && Object.keys(heat).length ? <Card><Text variant="label">Body parts worked (completed sets)</Text><MuscleMap heat={heat} height={200} /></Card> : null}
       {w.notes ? <Card><Text variant="label">Notes</Text><Text>{w.notes}</Text></Card> : null}
       {w.exercises.map((e) => (

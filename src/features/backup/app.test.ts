@@ -394,3 +394,32 @@ describe('backup, import/export, delete (scenarios 11-14)', () => {
     expect(settingsRepo(full).all()).toEqual({});
   });
 });
+
+describe('repeat workout and streaks', () => {
+  it('repeats a past workout with the same sets, unchecked, and refuses while one is in progress', () => {
+    const { db } = createTestDb();
+    profileRepo(db).create(validProfile);
+    const { session } = logWorkout(db, T0, [[20, 12], [30, 10]]);
+    const w = workoutsRepo(db);
+    const copy = w.repeat(session.id, T0 + 1000 * min);
+    const d = w.getDetail(copy.id);
+    expect(copy.status).toBe('in_progress');
+    expect(d.exercises).toHaveLength(1);
+    expect(d.exercises[0]!.sets.map((s) => [s.weightKg, s.reps, s.isCompleted])).toEqual([[20, 12, false], [30, 10, false]]);
+    expect(() => w.repeat(session.id)).toThrow(/current workout/);
+  });
+
+  it('counts a streak that is still alive if you trained yesterday, and this week\'s workouts', () => {
+    const { db } = createTestDb();
+    profileRepo(db).create(validProfile);
+    const day = 24 * 60 * min;
+    logWorkout(db, T0, [[20, 10]]);            // Mon 2 Nov
+    logWorkout(db, T0 + day, [[20, 10]]);      // Tue 3 Nov
+    const a = analyticsRepo(db);
+    expect(a.streaks('2026-11-04').current).toBe(2); // not trained Wed yet: streak alive
+    expect(a.streaks('2026-11-05').current).toBe(0); // missed a full day: broken
+    expect(a.streaks('2026-11-04').best).toBe(2);
+    expect(a.streaks('2026-11-04').weekWorkouts).toBe(2);
+    expect(a.streaks('2026-11-04').weekDays).toHaveLength(7);
+  });
+});

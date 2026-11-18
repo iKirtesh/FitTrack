@@ -1,7 +1,8 @@
 import { and, asc, eq, gte, lte, sql } from 'drizzle-orm';
 import {
-  bodyMeasurements, dailyActivity, exercises, runningSessions, runningSplits, workoutExercises, workoutSessions, workoutSets,
+  bodyMeasurements, cardioSessions, dailyActivity, exercises, runningSessions, runningSplits, workoutExercises, workoutSessions, workoutSets,
 } from '../schema';
+import { longestStreak } from './records';
 import { estimateOneRepMax } from '@/services/calculations';
 import { addDays, dayRange, localDay, startOfWeek } from '@/utils/dates';
 import type { AppDb } from '@/types/db';
@@ -38,6 +39,26 @@ export function analyticsRepo(db: AppDb) {
   };
 
   return {
+    /** Activity streak (any completed workout, run or cardio day) and this week's workout count. */
+    streaks(today: string = localDay()) {
+      const ws = db.select({ d: workoutSessions.date }).from(workoutSessions).where(eq(workoutSessions.status, 'completed')).all().map((x) => x.d);
+      const runs = db.select({ d: runningSessions.date }).from(runningSessions).where(eq(runningSessions.status, 'completed')).all().map((x) => x.d);
+      const cardio = db.select({ d: cardioSessions.date }).from(cardioSessions).all().map((x) => x.d);
+      const days = new Set([...ws, ...runs, ...cardio]);
+      // A streak is still alive if you have not yet trained today but did yesterday.
+      let cur = 0;
+      let d = days.has(today) ? today : addDays(today, -1);
+      while (days.has(d)) { cur++; d = addDays(d, -1); }
+      const monday = startOfWeek(today);
+      const week = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+      return {
+        current: cur,
+        best: longestStreak([...days]).length,
+        weekDays: week.map((x) => ({ date: x, active: days.has(x), future: x > today })),
+        weekWorkouts: ws.filter((x) => x >= monday && x <= today).length,
+      };
+    },
+
     /** Completed working sets per muscle group on one day (secondary muscles count half). Includes a workout still in progress. */
     muscleLoadForDay(day: string = localDay()): Record<string, number> {
       const rows = db.select({ group: exercises.muscleGroupId, secondary: exercises.secondaryMuscles }).from(workoutSets)

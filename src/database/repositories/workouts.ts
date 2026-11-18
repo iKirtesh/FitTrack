@@ -153,6 +153,22 @@ export function workoutsRepo(db: AppDb) {
       return getSession(id);
     },
 
+    /** Starts a new workout from a past one: same exercises, same sets, last weights and reps, all unchecked. */
+    repeat(sourceId: string, now: number = Date.now()): WorkoutSession {
+      const src = this.getDetail(sourceId);
+      const s = this.start({ name: src.name, now });
+      db.transaction((tx) => {
+        src.exercises.forEach((e, i) => {
+          const weId = newId();
+          tx.insert(workoutExercises).values({ id: weId, sessionId: s.id, exerciseId: e.exerciseId, position: i + 1, restSec: e.restSec }).run();
+          e.sets.forEach((st, n) => {
+            tx.insert(workoutSets).values({ id: newId(), workoutExerciseId: weId, setOrder: n + 1, kind: st.kind, weightKg: st.weightKg, reps: st.reps, durationSec: st.durationSec, distanceM: st.distanceM, isCompleted: false }).run();
+          });
+        });
+      });
+      return getSession(s.id);
+    },
+
     getDetail(id: string): WorkoutDetail {
       return { ...getSession(id), exercises: loadExercises(id) };
     },

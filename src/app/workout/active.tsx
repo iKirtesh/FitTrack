@@ -8,6 +8,7 @@ import { useDbMutation, useDbQuery, useRepos } from '@/hooks/data';
 import { useUnits } from '@/hooks/units';
 import { confirm, errorMessage, notify } from '@/services/dialogs';
 import { useSession } from '@/stores/session';
+import { useTheme } from '@/theme/ThemeProvider';
 import { formatDuration } from '@/utils/units';
 import { recordLabel, recordValue } from '@/features/records/labels';
 import type { DeletedExerciseSnapshot, DeletedSetSnapshot } from '@/database/repositories/workouts';
@@ -22,6 +23,8 @@ export default function ActiveWorkout() {
   const refresh = useInvalidateAll();
   const params = useLocalSearchParams<{ planId?: string; day?: string; name?: string }>();
   const startRest = useSession((s) => s.startRest);
+  const restActive = useSession((s) => s.rest != null);
+  const { colors } = useTheme();
   const [now, setNow] = useState(Date.now());
   const [undo, setUndo] = useState<Undo>(null);
   const [finishing, setFinishing] = useState(false);
@@ -52,6 +55,8 @@ export default function ActiveWorkout() {
 
   if (!w) return <Screen><ActivityIndicator /></Screen>;
   const elapsed = Math.floor((now - w.startedAt) / 1000);
+  const totalSets = w.exercises.reduce((n, e) => n + e.sets.length, 0);
+  const doneSets = w.exercises.reduce((n, e) => n + e.sets.filter((s) => s.isCompleted).length, 0);
 
   const isPr = (exerciseId: string, tracking: string, s: { weightKg: number | null; reps: number | null; isCompleted: boolean }) => {
     if (!s.isCompleted) return false;
@@ -90,6 +95,16 @@ export default function ActiveWorkout() {
           <View style={{ flex: 1 }}><Field label="Workout name" value={w.name} onChangeText={(t) => run(() => repos.workouts.updateMeta(w.id, { name: t }))} /></View>
           <View style={{ alignItems: 'flex-end' }}><Text variant="label">Duration</Text><Text variant="h1" style={{ fontVariant: ['tabular-nums'] }}>{formatDuration(elapsed)}</Text></View>
         </Row>
+
+        {totalSets > 0 ? (
+          <View style={{ gap: 6 }}>
+            <Row style={{ justifyContent: 'space-between' }}><Text variant="label">Progress</Text><Text variant="muted">{doneSets} of {totalSets} sets done</Text></Row>
+            <View style={{ height: 10, borderRadius: 5, backgroundColor: colors.track, overflow: 'hidden' }}>
+              <View style={{ height: 10, width: `${(doneSets / totalSets) * 100}%`, backgroundColor: doneSets === totalSets ? colors.success : colors.primary }} />
+            </View>
+          </View>
+        ) : null}
+        {!restActive ? <Row>{[60, 90, 120, 180].map((s) => <Button key={s} style={{ flex: 1 }} variant="secondary" title={`Rest ${s >= 120 ? `${s / 60}m` : `${s}s`}`} onPress={() => startRest(s)} />)}</Row> : null}
 
         {w.exercises.length === 0 ? <Card><Text variant="muted">Add your first exercise to begin. Previous weights and reps are filled in automatically.</Text></Card> : null}
 
